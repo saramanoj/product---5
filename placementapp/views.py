@@ -1,26 +1,135 @@
+import random
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import PlacementOfficerSerializer
+from .models import PlacementOfficer
 
 #registration
 #placement officer
-class PlacementOfficerRegisterAPIView(APIView):
 
+def _otp_cache_key(otp_type, value):
+    if not isinstance(otp_type, str) or not isinstance(value, str):
+        return None
+
+    otp_type = otp_type.strip().lower()
+    value = value.strip()
+    if otp_type not in ["email", "mobile"] or not value:
+        return None
+
+    if otp_type == "email":
+        value = value.lower()
+
+    return f"registration_otp_{otp_type}_{value}"
+
+
+class PlacementOfficerRegisterView(APIView):
     def post(self, request):
-        serializer = PlacementOfficerSerializer(data=request.data)
+        data = request.data.copy()
 
+        # Frontend uses camelCase, backend model uses snake_case.
+        mapping = {
+            "fullName": "full_name",
+            "University": "university",
+            "EmpId": "emp_id",
+            "Bio": "bio",
+            "confirmPassword": "confirm_password",
+            "terms": "terms_accepted",
+        }
+        for old, new in mapping.items():
+            if old in data:
+                data[new] = data.pop(old)
+
+        if data.get("password") != data.get("confirm_password"):
+            return Response(
+                {"confirmPassword": ["Passwords do not match."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # OTP flags are accepted from the frontend only for this demo.
+        # In production, these should be verified server-side using an OTP service.
+        serializer = PlacementOfficerSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            officer = serializer.save()
             return Response(
                 {
-                    "message": "Registration Successful",
-                    "data": serializer.data
+                    "message": "Placement Officer registration successful.",
+                    "user": {
+                        "id": officer.id,
+                        "role": officer.role,
+                        "fullName": officer.full_name,
+                        "email": officer.email,
+                        "mobile": officer.mobile,
+                        "university": officer.university,
+                        "gender": officer.gender,
+                        "empId": officer.emp_id,
+                    },
                 },
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendOtpView(APIView):
+    def post(self, request):
+        otp_type = request.data.get("type")
+        value = request.data.get("value")
+        cache_key = _otp_cache_key(otp_type, value)
+
+        if not cache_key:
+            return Response(
+                {"message": "OTP type and value are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        otp_type = otp_type.strip().lower()
+        otp = str(random.randint(100000, 999999))
+        cache.set(cache_key, otp, timeout=300)
+
+        # Development-only response so frontend integration can be tested
+        # without an email/SMS provider.
+        return Response(
+            {
+                "message": f"OTP sent to {otp_type}.",
+                "demo_otp": otp,
+                "expires_in": 300,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class VerifyOtpView(APIView):
+    def post(self, request):
+        otp_type = request.data.get("type")
+        value = request.data.get("value")
+        otp = request.data.get("otp")
+        cache_key = _otp_cache_key(otp_type, value)
+
+        if not cache_key or not isinstance(otp, (str, int)) or not str(otp).strip().isdigit() or len(str(otp).strip()) != 6:
+            return Response(
+                {"verified": False, "message": "OTP type, value, and a 6-digit OTP are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        otp = str(otp).strip()
+        saved_otp = cache.get(cache_key)
+
+        if saved_otp and str(saved_otp) == otp:
+            cache.delete(cache_key)
+            return Response({"verified": True, "message": "OTP verified successfully."})
+
+        return Response(
+            {
+                "verified": False,
+                "message": "OTP has expired or was not requested for this email or mobile number."
+                if saved_otp is None
+                else "Incorrect OTP. Please check the code and try again.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
         
 #recruiter registration
 
