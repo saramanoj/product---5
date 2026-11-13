@@ -1,44 +1,68 @@
+import re
+from .models import PlacementOfficer
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
 #registration
 #placement officer
-from .models import PlacementOfficer
-class PlacementOfficerSerializer(serializers.ModelSerializer):
-    confirmPassword = serializers.CharField(write_only=True)
 
+class PlacementOfficerSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlacementOfficer
         fields = [
-            'id',
-            'full_name',
-            'official_email',
-            'country_code',
-            'phone_number',
-            'organization_name',
-            'department',
-            'employee_id',
-            'designation',
-            'password',
-            'confirmPassword',
-            'registered_on'
+            "id", "role", "full_name", "email", "mobile", "university",
+            "gender", "emp_id", "password", "bio",
+            "is_email_verified", "is_mobile_verified", "terms_accepted",
+            "created_at",
         ]
-        read_only_fields = ['id', 'registered_on']
         extra_kwargs = {
-            'password': {'write_only': True}
+            "password": {"write_only": True},
+            "is_email_verified": {"read_only": True},
+            "is_mobile_verified": {"read_only": True},
+            "created_at": {"read_only": True},
         }
 
+    def validate_email(self, value):
+        if PlacementOfficer.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Email already registered.")
+        return value.lower()
+
+    def validate_mobile(self, value):
+        if not re.fullmatch(r"[6-9]\d{9}", value):
+            raise serializers.ValidationError("Enter a valid 10-digit mobile number.")
+        if PlacementOfficer.objects.filter(mobile=value).exists():
+            raise serializers.ValidationError("Mobile number already registered.")
+        return value
+
+    def validate_emp_id(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Employer ID is required.")
+        if PlacementOfficer.objects.filter(emp_id__iexact=value).exists():
+            raise serializers.ValidationError("Employer ID already registered.")
+        return value
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must contain at least 8 characters.")
+        return value
+
+    def validate_bio(self, value):
+        if len(value) > 500:
+            raise serializers.ValidationError("Bio maximum 500 characters.")
+        return value
+
     def validate(self, attrs):
-        if attrs['password'] != attrs['confirmPassword']:
-            raise serializers.ValidationError(
-                {"confirmPassword": "Passwords do not match."}
-            )
+        if not attrs.get("terms_accepted"):
+            raise serializers.ValidationError({"terms_accepted": "Please accept the terms and conditions."})
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('confirmPassword')
-        validated_data['password'] = make_password(validated_data['password'])
+        # Demo project: password is stored as a hash.
+        from django.contrib.auth.hashers import make_password
+        validated_data["password"] = make_password(validated_data["password"])
         return PlacementOfficer.objects.create(**validated_data)
+
 
 #recruiter registration
 
