@@ -1,14 +1,19 @@
-from django.urls import path
-from .views import PlacementOfficerRegisterAPIView,StudentRegistrationView,RecruiterRegisterView,StudentCoordinatorRegisterView, TrainingCoordinatorRegisterView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import PlacementOfficerRegisterAPIView,StudentRegistrationView,RecruiterRegisterView,StudentCoordinatorRegisterView, TrainingCoordinatorRegisterView, verify_otp 
 from .views import CommonLoginAPIView,PlacementLoginView,RecruiterLoginView,StudentLoginView,TrainingCoordinatorLoginView,AdminLoginView
 from .views import ForgotPasswordAPIView,ResetPasswordAPIView,AdminDashboardDataView,TrainingCoordinatorDashboardView,RecruiterDashboardView,PlacementDashboardView,StudentDashboardAPIView
 from .views import TrainingCoordinatorProfileView,StudentProfileView,RecruiterProfileView,AdminProfileView
+
+router = DefaultRouter()
+router.register(r'recruiters', RecruiterViewSet, basename='recruiter')
 
 urlpatterns = [
 #registration
     path('placement-officer/register/', PlacementOfficerRegisterAPIView.as_view()),
     path('register/student/', StudentRegistrationView.as_view(), name='student-registration'),
-    path('recruiter-register/', RecruiterRegisterView.as_view()),
+    path('Recruiters-registration/', include(router.urls)),
+    path('verify-otp/', verify_otp, name='verify-otp'),
     # path('student-coordinator/register/', StudentCoordinatorRegisterView.as_view(), name="student-coordinator-register"),
     path("training-coordinator/register/", TrainingCoordinatorRegisterView.as_view(), name="training-coordinator-register"),
     
