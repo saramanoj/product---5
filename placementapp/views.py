@@ -21,49 +21,79 @@ class PlacementOfficerRegisterAPIView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
 #recruiter registration
 
-from rest_framework.decorators import api_view
+from rest_framework import viewsets, status, generics
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework import status
-from .models import Recruiter
-from .serializers import RecruiterSerializer
-from datetime import date
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .models import User
+from .serializers import (
+    RecruiterRegistrationSerializer,
+    RecruiterSerializer,
+    VerifyOTPSerializer,
+)
 
-# @api_view(['POST'])
-# def recruiter_register(request):
 
-from rest_framework.views import APIView
+class RecruiterViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.filter(role='Recruiter')
+    permission_classes = [AllowAny]  # Restrict later
 
-class RecruiterRegisterView(APIView):
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RecruiterRegistrationSerializer
+        return RecruiterSerializer
 
-    def get(self, request):
-        return Response({"message": "Recruiter API Working"})
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {
+                "message": "Registration successful",
+                "user": RecruiterSerializer(user).data
+            },
+            status=status.HTTP_201_CREATED
+        )
 
-    def post(self, request):
-        # POST logic here
+    # Optional: custom endpoints
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        serializer = RecruiterSerializer(request.user)
+        return Response(serializer.data)
 
-        count = Recruiter.objects.count() + 1
 
-        hr_id = f"HR-{count:03}"
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_otp(request):
+    """
+    Placeholder OTP verification.
+    In production: store OTP in Redis / DB with expiry and validate here.
+    """
+    serializer = VerifyOTPSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
 
-        today = date.today().strftime("%d/%m/%Y")
+    otp_type = serializer.validated_data['type']
+    value = serializer.validated_data['value']
+    otp = serializer.validated_data['otp']
 
-        data = request.data.copy()
+    # TODO: Real OTP check
+    # if not check_otp(value, otp):
+    #     return Response({"error": "Invalid OTP"}, status=400)
 
-        data["hr_id"] = hr_id
-        data["registered_on"] = today
-
-        serializer = RecruiterSerializer(data=data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                "message":"Registration Successful",
-                "data":serializer.data
-            },status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    try:
+        if otp_type == 'email':
+            user = User.objects.get(email=value)
+            user.is_email_verified = True
+        else:
+            user = User.objects.get(mobile=value)
+            user.is_mobile_verified = True
+        user.save()
+        return Response({"message": f"{otp_type} verified successfully"})
+    except User.DoesNotExist:
+        # Allow verification before registration (store in cache)
+        return Response({"message": f"{otp_type} verified (pre-registration)"})
 
 #student registration
 from rest_framework.views import APIView
