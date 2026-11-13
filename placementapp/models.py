@@ -64,22 +64,57 @@ class PlacementOfficer(models.Model):
     
  #recruiter registration
 
-class Recruiter(models.Model):
-    hr_id = models.CharField(max_length=20, unique=True)
-    registered_on = models.CharField(max_length=20)
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.core.validators import RegexValidator
 
-    full_name = models.CharField(max_length=100)
+
+class User(AbstractUser):
+    ROLE_CHOICES = [
+        ('Recruiter', 'Recruiter'),
+        ('Candidate', 'Candidate'),
+        ('Placement Officer', 'Placement Officer'),
+        ('Training Coordinator', 'Training Coordinator'),
+    ]
+
+    GENDER_CHOICES = [
+        ('Female', 'Female'),
+        ('Male', 'Male'),
+        ('Other', 'Other'),
+        ('Prefer not to say', 'Prefer not to say'),
+    ]
+
+    # Override username to use email
+    username = None
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=10)
 
-    company = models.CharField(max_length=100)
-    industry = models.CharField(max_length=100)
-    designation = models.CharField(max_length=100)
+    role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='Recruiter')
+    full_name = models.CharField(max_length=150)
+    mobile = models.CharField(
+        max_length=10,
+        unique=True,
+        validators=[RegexValidator(r'^[6-9]\d{9}$', 'Enter a valid 10-digit mobile number')]
+    )
+    designation = models.CharField(max_length=100, blank=True)
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
+    company_name = models.CharField(max_length=200, blank=True)
+    website = models.URLField(blank=True, null=True)
+    industry = models.CharField(max_length=150, blank=True)
 
-    password = models.CharField(max_length=200)
+    is_email_verified = models.BooleanField(default=False)
+    is_mobile_verified = models.BooleanField(default=False)
+    terms_accepted = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['full_name', 'mobile']
 
     def __str__(self):
-        return self.full_name
+        return f"{self.full_name} ({self.email}) - {self.role}"
+    
+
        
 #student registration
 
