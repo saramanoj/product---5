@@ -42,13 +42,93 @@ class PlacementOfficerSerializer(serializers.ModelSerializer):
 
 #recruiter registration
 
-from .models import Recruiter
+from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+from .models import User
+import re
 
-class RecruiterSerializer(serializers.ModelSerializer):
+
+class RecruiterRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    confirm_password = serializers.CharField(write_only=True, required=True)
+    terms = serializers.BooleanField(write_only=True)
 
     class Meta:
-        model = Recruiter
-        fields = '__all__'   
+        model = User
+        fields = [
+            'id', 'role', 'full_name', 'email', 'mobile', 'designation',
+            'gender', 'company_name', 'website', 'industry',
+            'password', 'confirm_password', 'terms',
+            'is_email_verified', 'is_mobile_verified',
+        ]
+        read_only_fields = ['is_email_verified', 'is_mobile_verified']
+        extra_kwargs = {
+            'email': {'required': True},
+            'full_name': {'required': True},
+            'mobile': {'required': True},
+        }
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already registered.")
+        return value.lower()
+
+    def validate_mobile(self, value):
+        if not re.match(r'^[6-9]\d{9}$', value):
+            raise serializers.ValidationError("Enter a valid 10-digit mobile number.")
+        if User.objects.filter(mobile=value).exists():
+            raise serializers.ValidationError("Mobile number already registered.")
+        return value
+
+    def validate_website(self, value):
+        if value:
+            pattern = r'^(https?:\/\/)?(www\.)?[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$'
+            if not re.match(pattern, value):
+                raise serializers.ValidationError("Enter a valid website URL.")
+        return value
+
+    def validate(self, attrs):
+        if attrs.get('password') != attrs.get('confirm_password'):
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+
+        if not attrs.get('terms'):
+            raise serializers.ValidationError({"terms": "You must accept the terms and conditions."})
+
+        # Optional: force verification before registration
+        # if not attrs.get('is_email_verified') or not attrs.get('is_mobile_verified'):
+        #     raise serializers.ValidationError("Please verify email and mobile first.")
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('confirm_password')
+        validated_data.pop('terms')
+        password = validated_data.pop('password')
+
+        user = User(**validated_data)
+        user.set_password(password)
+        user.terms_accepted = True
+        user.save()
+        return user
+
+
+class RecruiterSerializer(serializers.ModelSerializer):
+    """For Read / Update (no password)"""
+    class Meta:
+        model = User
+        fields = [
+            'id', 'role', 'full_name', 'email', 'mobile', 'designation',
+            'gender', 'company_name', 'website', 'industry',
+            'is_email_verified', 'is_mobile_verified',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['email', 'mobile', 'role', 'is_email_verified', 'is_mobile_verified']
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=['email', 'mobile'])
+    value = serializers.CharField()
+    otp = serializers.CharField(max_length=6)   
 
 #student registration
 
