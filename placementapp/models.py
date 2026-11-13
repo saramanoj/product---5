@@ -40,28 +40,33 @@ class TrainingCoordinator(models.Model):
         return self.full_name
 
 #placementofficer
-
 class PlacementOfficer(models.Model):
-    DESIGNATION_CHOICES = [
-        ('professor', 'Professor'),
-        ('trainer', 'Trainer'),
-        ('admin', 'Administrator'),
+    ROLE_CHOICES = [
+        ("Placement Officer", "Placement Officer"),
+    ]
+    GENDER_CHOICES = [
+        ("Male", "Male"),
+        ("Female", "Female"),
+        ("Other", "Other"),
     ]
 
-    full_name = models.CharField(max_length=200)
-    official_email = models.EmailField(unique=True)
-    country_code = models.CharField(max_length=10, default="+91")
-    phone_number = models.CharField(max_length=15)
-    organization_name = models.CharField(max_length=200)
-    department = models.CharField(max_length=200)
-    employee_id = models.CharField(max_length=100)
-    designation = models.CharField(max_length=50, choices=DESIGNATION_CHOICES)
-    password = models.CharField(max_length=255)
-    registered_on = models.DateTimeField(auto_now_add=True)
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="Placement Officer")
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField(unique=True)
+    mobile = models.CharField(max_length=10, unique=True)
+    university = models.CharField(max_length=200)
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES)
+    emp_id = models.CharField(max_length=100, unique=True)
+    password = models.CharField(max_length=128)
+    bio = models.TextField(max_length=500, blank=True)
+    is_email_verified = models.BooleanField(default=False)
+    is_mobile_verified = models.BooleanField(default=False)
+    terms_accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.full_name
-    
+        return f"{self.full_name} - {self.emp_id}"
+
  #recruiter registration
 
 from django.contrib.auth.models import AbstractUser
