@@ -4,18 +4,24 @@ from .views import PlacementOfficerRegisterAPIView,StudentRegistrationView,Recru
 from .views import CommonLoginAPIView,PlacementLoginView,RecruiterLoginView,StudentLoginView,TrainingCoordinatorLoginView,AdminLoginView
 from .views import ForgotPasswordAPIView,ResetPasswordAPIView,AdminDashboardDataView,TrainingCoordinatorDashboardView,RecruiterDashboardView,PlacementDashboardView,StudentDashboardAPIView
 from .views import TrainingCoordinatorProfileView,StudentProfileView,RecruiterProfileView,AdminProfileView
+from .views import PlacementOfficerRegisterView, SendOtpView, VerifyOtpView
 
 router = DefaultRouter()
 router.register(r'recruiters', RecruiterViewSet, basename='recruiter')
 
 urlpatterns = [
 #registration
-    path('placement-officer/register/', PlacementOfficerRegisterAPIView.as_view()),
+  
     path('register/student/', StudentRegistrationView.as_view(), name='student-registration'),
     path('Recruiters-registration/', include(router.urls)),
-    path('verify-otp/', verify_otp, name='verify-otp'),
+
     # path('student-coordinator/register/', StudentCoordinatorRegisterView.as_view(), name="student-coordinator-register"),
     path("training-coordinator/register/", TrainingCoordinatorRegisterView.as_view(), name="training-coordinator-register"),
+    
+    path("placement-officer/", PlacementOfficerRegisterView.as_view(), name="placement-officer-register"),
+    path("send-otp/", SendOtpView.as_view(), name="send-otp"),
+    path("verify-otp/", VerifyOtpView.as_view(), name="verify-otp"),
+
     
 #login
     path("commonlogin/", CommonLoginAPIView.as_view(), name="login"),
