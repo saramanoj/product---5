@@ -221,32 +221,6 @@ class StudentRegistrationView(APIView):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-#student coordinator
-
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .models import StudentCoordinator
-from .serializers import StudentCoordinatorSerializer
-
-
-class StudentCoordinatorRegisterView(APIView):
-
-    def post(self, request):
-        serializer = StudentCoordinatorSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-
-            return Response(
-                {
-                    "message": "Student Coordinator registered successfully.",
-                    "data": serializer.data
-                },
-                status=status.HTTP_201_CREATED
-            )
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 #training coordinator
 
@@ -254,7 +228,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import TrainingCoordinator
 from .serializers import TrainingCoordinatorSerializer
 
 
@@ -265,13 +238,12 @@ class TrainingCoordinatorRegisterView(APIView):
 
         if serializer.is_valid():
             serializer.save()
-
             return Response(
                 {
                     "message": "Training Coordinator registered successfully.",
-                    "data": serializer.data
+                    "data": serializer.data,
                 },
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
