@@ -237,31 +237,71 @@ class StudentRegistrationSerializer(serializers.Serializer):
             )
 
         return user
-    
-#student coordinator
 
-from .models import StudentCoordinator
-
-class StudentCoordinatorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StudentCoordinator
-        fields = '__all__'
-        extra_kwargs = {
-            "password": {
-                "write_only": True
-            }
-        }
 
 #training coordinator
+
+import re
+from django.contrib.auth.hashers import make_password
+from rest_framework import serializers
+from .models import TrainingCoordinator
+
 class TrainingCoordinatorSerializer(serializers.ModelSerializer):
+    # Frontend payload keys mapped to snake_case model fields
+    fullName = serializers.CharField(source="full_name", max_length=100)
+    University = serializers.CharField(source="university", max_length=150)
+    EmpId = serializers.CharField(source="emp_id", max_length=30)
+    confirmPassword = serializers.CharField(write_only=True)
+    terms = serializers.BooleanField(source="terms_accepted")
+    isEmailVerified = serializers.BooleanField(source="is_email_verified", required=False, default=False)
+    isMobileVerified = serializers.BooleanField(source="is_mobile_verified", required=False, default=False)
+
     class Meta:
         model = TrainingCoordinator
-        fields = '__all__'
+        fields = [
+            "id",
+            "role",
+            "fullName",
+            "email",
+            "mobile",
+            "University",
+            "gender",
+            "EmpId",
+            "password",
+            "confirmPassword",
+            "terms",
+            "isEmailVerified",
+            "isMobileVerified",
+            "registered_on",
+        ]
+        read_only_fields = ["id", "registered_on"]
         extra_kwargs = {
-            "password": {
-                "write_only": True
-            }
+            "password": {"write_only": True, "min_length": 8},
+            "role": {"required": False, "default": "Training Coordinator"},
         }
+
+    def validate_mobile(self, value):
+        if not re.match(r"^[6-9]\d{9}$", value):
+            raise serializers.ValidationError("Enter a valid 10-digit mobile number.")
+        return value
+
+    def validate_terms(self, value):
+        if not value:
+            raise serializers.ValidationError("Please accept the terms and conditions.")
+        return value
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        confirm_password = attrs.pop("confirmPassword", None)
+
+        if password != confirm_password:
+            raise serializers.ValidationError({"confirmPassword": "Passwords do not match."})
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["password"] = make_password(validated_data["password"])
+        return super().create(validated_data)
         
 #login
 
