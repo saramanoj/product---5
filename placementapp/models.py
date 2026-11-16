@@ -5,39 +5,30 @@ from django.db import models
 #training coordinator
 class TrainingCoordinator(models.Model):
 
-    DESIGNATION_CHOICES = [
-    ("","Select Specific Role"),
-    ("professor", "Professor"),
-    ("trainer", "Trainer"),
-    ("admin", "Administrator"),
+    GENDER_CHOICES = [
+        ("Female", "Female"),
+        ("Male", "Male"),
+        ("Other", "Other"),
+        ("Prefer not to say", "Prefer not to say"),
     ]
 
+    role = models.CharField(max_length=50, default="Training Coordinator")
     full_name = models.CharField(max_length=100)
-
-    official_email = models.EmailField(unique=True)
-
-    country_code = models.CharField(max_length=5, default="+91")
-
-    phone_number = models.CharField(max_length=10, unique=True)
-
-    organization_name = models.CharField(max_length=150)
-
-    department = models.CharField(max_length=100)
-
-    employee_id = models.CharField(max_length=30, unique=True)
-
-    designation = models.CharField(
-        max_length=20,
-        choices=DESIGNATION_CHOICES,
-    )
-
+    email = models.EmailField(unique=True)
+    mobile = models.CharField(max_length=10, unique=True)
+    university = models.CharField(max_length=150)
+    gender = models.CharField(max_length=25, choices=GENDER_CHOICES)
+    emp_id = models.CharField(max_length=30, unique=True)
     password = models.CharField(max_length=255)
+
+    terms_accepted = models.BooleanField(default=False)
+    is_email_verified = models.BooleanField(default=False)
+    is_mobile_verified = models.BooleanField(default=False)
 
     registered_on = models.DateTimeField(auto_now_add=True)
 
-
     def __str__(self):
-        return self.full_name
+        return f"{self.full_name} ({self.emp_id})"
 
 #placementofficer
 class PlacementOfficer(models.Model):
@@ -160,31 +151,6 @@ class StudentProfile(models.Model):
 
     def __str__(self):
         return f"Student Profile for {self.StudentProfile.email}"
-
-#training coordinaator
-
-class StudentCoordinator(models.Model):
-
-    DESIGNATION_CHOICES = [
-    ("","Select Specific Role"),
-    ("professor", "Professor"),
-    ("trainer", "Trainer"),
-    ("admin", "Administrator"),
-    ]
-
-    full_name = models.CharField(max_length=100)
-    official_email = models.EmailField(unique=True)
-    country_code = models.CharField(max_length=5, default="+91")
-    phone_number = models.CharField(max_length=10, unique=True)
-    organization_name = models.CharField(max_length=150)
-    department = models.CharField(max_length=100)
-    employee_id = models.CharField(max_length=30, unique=True)
-    designation = models.CharField(max_length=20,choices=DESIGNATION_CHOICES,)
-    password = models.CharField(max_length=255)
-    registered_on = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.full_name
 
 #login
 #common login 
